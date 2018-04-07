@@ -18,7 +18,9 @@ public class ParticleCube : MonoBehaviour {
     public float springTension; // Tension of spring between masses
     public float damping; // Damping term for motion
     public float mass; // Mass of each sphere
+    public float friction; // Friction of each sphere
     public float maxDisplacement; // Maximum displacement before a spring snaps, defined as a multiplier on rest length.
+    public float size; // Size of each sphere.
 
     private List<List<List<GameObject>>> spheres = new List<List<List<GameObject>>>();
     private List<Spring> springs = new List<Spring>();
@@ -39,10 +41,12 @@ public class ParticleCube : MonoBehaviour {
                     Vector3 pos = new Vector3(x, y, z);
                     GameObject sphere = Instantiate(spherePrefab, pos, Quaternion.identity);
                     sphere.transform.parent = this.transform;
+                    sphere.transform.localScale = Vector3.one * size;
                     Mass m = sphere.AddComponent<Mass>();
                     m.position = pos;
                     m.prevPosition = pos;
                     m.mass = mass;
+                    m.friction = friction;
                     spheres[i][j].Add(sphere);
                 }
             }
