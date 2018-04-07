@@ -18,9 +18,11 @@ public class ParticleCube : MonoBehaviour {
     public float springTension; // Tension of spring between masses
     public float damping; // Damping term for motion
     public float mass; // Mass of each sphere
+    public float maxDisplacement; // Maximum displacement before a spring snaps, defined as a multiplier on rest length.
 
     private List<List<List<GameObject>>> spheres = new List<List<List<GameObject>>>();
     private List<Spring> springs = new List<Spring>();
+    private List<Spring> brokenSprings = new List<Spring>();
 
 	// Use this for initialization
 	void Start () {
@@ -79,7 +81,9 @@ public class ParticleCube : MonoBehaviour {
 
     // Called every physics frame
     void FixedUpdate() {
-        // Clear out forces and add gravity
+        brokenSprings.Clear();
+
+        // Clear out forces, add gravity
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 for (int k = 0; k < N; k++) {
@@ -94,18 +98,28 @@ public class ParticleCube : MonoBehaviour {
             Vector3 diffAToB = spring.objB.position - spring.objA.position;
             Vector3 dirAToB = diffAToB.normalized;
             float displacement = diffAToB.magnitude - spring.restLength;
+
+            // TEMP: check if spring should break
+            if (Mathf.Abs(displacement) > maxDisplacement * spring.restLength) {
+                brokenSprings.Add(spring);
+                continue;
+            }
+
             Vector3 f = dirAToB * displacement * spring.ks;
             spring.objA.force += f;
             spring.objB.force -= f;
         }
+
+        // Remove springs that were slated to break
+        springs.RemoveAll(x => brokenSprings.Contains(x));
 
         // Perform verlet integration
         float dt = Time.fixedDeltaTime;
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 for (int k = 0; k < N; k++) {
-                    if (i == 0 && j == 0 && k == 0) // Hack for pinned node
-                        continue;
+                    //if (i == 0 && j == 0 && k == 0) // Hack for pinned node
+                    //    continue;
 
                     Mass m = spheres[i][j][k].GetComponent<Mass>();
                     Vector3 tempStorage = m.position;
@@ -122,7 +136,7 @@ public class ParticleCube : MonoBehaviour {
 
     // Called every frame
     void Update() {
-        // Draw lines
+        // Draw lines representing every spring
         if (debugOn) {
             foreach (Spring spring in springs) {
                 Debug.DrawLine(spring.objA.position, spring.objB.position, Color.red);
