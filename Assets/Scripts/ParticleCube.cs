@@ -160,10 +160,6 @@ public class ParticleCube : MonoBehaviour {
                 Debug.DrawLine(spring.objA.position, spring.objB.position, Color.red);
             }
         }
-        
-        if (Input.GetKeyDown(KeyCode.Space)) {
-            Mass.STATE = "TEMP_ENABLED";
-        }
     }
 
     // Adds a spring between the two coordinates to the list
