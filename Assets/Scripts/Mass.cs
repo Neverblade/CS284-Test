@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class Mass : MonoBehaviour {
 
-    static float SURFACE_OFFSET = 0.00075f;
+    static float SURFACE_OFFSET = 0.00001f;
+    public static string STATE = "ENABLED";
 
     public float mass;
     public float friction;
@@ -13,42 +14,24 @@ public class Mass : MonoBehaviour {
     public Vector3 prevPosition;
 
     // Collision handling modeled after proj4
-    void OnCollisionEnter(Collision collision) {
+    void OnCollisionStay(Collision collision) {
         ContactPoint contact = collision.contacts[0];
         Vector3 hitPoint = contact.point;
         Vector3 normal = contact.normal;
 
-        // Find the surface points on the particle sphere
-        Vector3 velocityDir = (position - prevPosition).normalized;
-        Vector3 surfacePoint = position + velocityDir * transform.localScale.x / 2;
-        Vector3 surfacePointPrev = prevPosition + velocityDir * transform.localScale.x / 2;
+        // Find the surface point on the particle sphere
+        // Surface point is defined as the point that portrudes into the plane the most
+        // Found by going in the opposite direction of the plane's normal
+        Vector3 surfacePoint = position - normal * transform.localScale.x / 2;
+        Vector3 surfacePointPrev = prevPosition - normal * transform.localScale.x / 2;
 
         // Compute the tangent point using ray-plane intersection, then the correction
         float t = Vector3.Dot(hitPoint - surfacePoint, normal) / Vector3.Dot(normal, normal);
         Vector3 tangentPoint = surfacePoint + (t + SURFACE_OFFSET) * normal;
         Vector3 correction = tangentPoint - surfacePointPrev;
 
-        print(t);
-
-        /*GameObject hitPointObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        hitPointObj.name = "HitPointObj";
-        hitPointObj.transform.position = hitPoint;
-        hitPointObj.transform.localScale = Vector3.one * 0.01f;
-
-        GameObject surfacePointObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        surfacePointObj.name = "SurfacePointObj";
-        surfacePointObj.transform.position = surfacePoint;
-        surfacePointObj.transform.localScale = Vector3.one * 0.01f;
-
-        GameObject surfacePointPrevObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        surfacePointPrevObj.name = "SurfacePointPrevObj";
-        surfacePointPrevObj.transform.position = surfacePointPrev;
-        surfacePointPrevObj.transform.localScale = Vector3.one * 0.01f;*/
-
         // Update position
         position = prevPosition + correction * (1 - friction);
         transform.position = position;
-
-        print("test");
     }
 }

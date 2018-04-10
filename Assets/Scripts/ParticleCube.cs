@@ -13,14 +13,14 @@ public class ParticleCube : MonoBehaviour {
     public bool debugOn;
     public GameObject spherePrefab; // Prefab for the individual sphere
 
-    public int N = 4; // # of spheres on each edge
-    public float distanceRatio; // Distance between spheres defined as a multiplier on the sphere size.
+    public Vector3 size; // Size of the total cube
+    public int xN, yN, zN; // # of spheres along each axis
     public float springTension; // Tension of spring between masses
     public float damping; // Damping term for motion
     public float mass; // Mass of each sphere
     public float friction; // Friction of each sphere
     public float maxDisplacement; // Maximum displacement before a spring snaps, defined as a multiplier on rest length.
-    public float size; // Size of each sphere.
+    public float particleSize; // Size of each sphere. A size of 1 leaves no gaps.
 
     private List<List<List<GameObject>>> spheres = new List<List<List<GameObject>>>();
     private List<Spring> springs = new List<Spring>();
@@ -28,34 +28,43 @@ public class ParticleCube : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+        // Compute distances between spheres and size
+        float yDistance = size.y / yN, xDistance = size.x / xN, zDistance = size.z / zN;
+        float trueSize = Mathf.Min(yDistance, xDistance, zDistance) * particleSize;
+
         // Initialize spheres and place into data structure
-        float trueDistance = distanceRatio * spherePrefab.transform.localScale.x;
-		for (int i = 0; i < N; i++) {
+		for (int i = 0; i < yN; i++) {
             spheres.Add(new List<List<GameObject>>());
-            float y = transform.position.y + trueDistance * i;
-            for (int j = 0; j < N; j++) {
+            float y = transform.position.y + yDistance * i;
+            for (int j = 0; j < xN; j++) {
                 spheres[i].Add(new List<GameObject>());
-                float x = transform.position.x + trueDistance * j;
-                for (int k = 0; k < N; k++) {
-                    float z = transform.position.z + trueDistance * k;
+                float x = transform.position.x + xDistance * j;
+                for (int k = 0; k < zN; k++) {
+                    float z = transform.position.z + zDistance * k;
+
+                    // Create object
                     Vector3 pos = new Vector3(x, y, z);
                     GameObject sphere = Instantiate(spherePrefab, pos, Quaternion.identity);
                     sphere.transform.parent = this.transform;
-                    sphere.transform.localScale = Vector3.one * size;
+                    sphere.transform.localScale = Vector3.one * trueSize;
+
+                    // Initialize mass component
                     Mass m = sphere.AddComponent<Mass>();
                     m.position = pos;
                     m.prevPosition = pos;
                     m.mass = mass;
                     m.friction = friction;
+
+                    // Add to list
                     spheres[i][j].Add(sphere);
                 }
             }
         }
 
         // Initialize springs
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                for (int k = 0; k < N; k++) {
+        for (int i = 0; i < yN; i++) {
+            for (int j = 0; j < xN; j++) {
+                for (int k = 0; k < zN; k++) {
                     // Straight edges
                     AddSpring(i, j, k, i + 1, j, k);
                     AddSpring(i, j, k, i, j + 1, k);
@@ -85,12 +94,18 @@ public class ParticleCube : MonoBehaviour {
 
     // Called every physics frame
     void FixedUpdate() {
+        if (Mass.STATE.Equals("DISABLED"))
+            return;
+        if (Mass.STATE.Equals("TEMP_ENABLED"))
+            Mass.STATE = "DISABLED";
+
         brokenSprings.Clear();
+        int brokenSpringCounter = 0;
 
         // Clear out forces, add gravity
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                for (int k = 0; k < N; k++) {
+        for (int i = 0; i < yN; i++) {
+            for (int j = 0; j < xN; j++) {
+                for (int k = 0; k < zN; k++) {
                     Mass m = spheres[i][j][k].GetComponent<Mass>();
                     m.force = m.mass * gravity;
                 }
@@ -106,6 +121,8 @@ public class ParticleCube : MonoBehaviour {
             // TEMP: check if spring should break
             if (Mathf.Abs(displacement) > maxDisplacement * spring.restLength) {
                 brokenSprings.Add(spring);
+                brokenSpringCounter++;
+                //Debug.Log("Snap!");
                 continue;
             }
 
@@ -115,13 +132,14 @@ public class ParticleCube : MonoBehaviour {
         }
 
         // Remove springs that were slated to break
-        springs.RemoveAll(x => brokenSprings.Contains(x));
+        if (brokenSpringCounter > 0)
+            springs.RemoveAll(x => brokenSprings.Contains(x));
 
         // Perform verlet integration
         float dt = Time.fixedDeltaTime;
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                for (int k = 0; k < N; k++) {
+        for (int i = 0; i < yN; i++) {
+            for (int j = 0; j < xN; j++) {
+                for (int k = 0; k < zN; k++) {
                     //if (i == 0 && j == 0 && k == 0) // Hack for pinned node
                     //    continue;
 
@@ -146,6 +164,10 @@ public class ParticleCube : MonoBehaviour {
                 Debug.DrawLine(spring.objA.position, spring.objB.position, Color.red);
             }
         }
+        
+        if (Input.GetKeyDown(KeyCode.Space)) {
+            Mass.STATE = "TEMP_ENABLED";
+        }
     }
 
     // Adds a spring between the two coordinates to the list
@@ -162,6 +184,6 @@ public class ParticleCube : MonoBehaviour {
 
     // Checks if coordinates are in bounds
     bool InBounds (int i, int j, int k) {
-        return 0 <= i && i < N && 0 <= j && j < N && 0 <= k && k < N;
+        return 0 <= i && i < yN && 0 <= j && j < xN && 0 <= k && k < zN;
     }
 }
