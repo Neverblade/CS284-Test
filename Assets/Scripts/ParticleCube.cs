@@ -35,23 +35,24 @@ public class ParticleCube : MonoBehaviour {
         // Initialize spheres and place into data structure
 		for (int i = 0; i < yN; i++) {
             spheres.Add(new List<List<GameObject>>());
-            float y = transform.position.y + yDistance * i;
+            float y = yDistance * i;
             for (int j = 0; j < xN; j++) {
                 spheres[i].Add(new List<GameObject>());
-                float x = transform.position.x + xDistance * j;
+                float x = xDistance * j;
                 for (int k = 0; k < zN; k++) {
-                    float z = transform.position.z + zDistance * k;
+                    float z = zDistance * k;
 
                     // Create object
                     Vector3 pos = new Vector3(x, y, z);
-                    GameObject sphere = Instantiate(spherePrefab, pos, Quaternion.identity);
+                    GameObject sphere = Instantiate(spherePrefab);
                     sphere.transform.parent = this.transform;
+                    sphere.transform.localPosition = pos;
                     sphere.transform.localScale = Vector3.one * trueSize;
 
                     // Initialize mass component
                     Mass m = sphere.AddComponent<Mass>();
-                    m.position = pos;
-                    m.prevPosition = pos;
+                    m.position = sphere.transform.position;
+                    m.prevPosition = m.position;
                     m.mass = mass;
                     m.friction = friction;
 
@@ -94,11 +95,6 @@ public class ParticleCube : MonoBehaviour {
 
     // Called every physics frame
     void FixedUpdate() {
-        if (Mass.STATE.Equals("DISABLED"))
-            return;
-        if (Mass.STATE.Equals("TEMP_ENABLED"))
-            Mass.STATE = "DISABLED";
-
         brokenSprings.Clear();
         int brokenSpringCounter = 0;
 

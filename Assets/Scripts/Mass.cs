@@ -5,7 +5,6 @@ using UnityEngine;
 public class Mass : MonoBehaviour {
 
     static float SURFACE_OFFSET = 0.00001f;
-    public static string STATE = "ENABLED";
 
     public float mass;
     public float friction;
