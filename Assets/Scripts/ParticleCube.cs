@@ -12,6 +12,7 @@ public class ParticleCube : MonoBehaviour {
 
     public bool debugOn;
     public GameObject spherePrefab; // Prefab for the individual sphere
+    public Material brokenMaterial; // Material applied when a spring is broken.
 
     public Vector3 size; // Size of the total cube
     public int xN, yN, zN; // # of spheres along each axis
@@ -21,6 +22,7 @@ public class ParticleCube : MonoBehaviour {
     public float friction; // Friction of each sphere
     public float maxDisplacement; // Maximum displacement before a spring snaps, defined as a multiplier on rest length.
     public float particleSize; // Size of each sphere. A size of 1 leaves no gaps.
+    public float simulationSpeed; // Speed of the simulation, defined as a multiplier on normal time.
 
     private List<List<List<GameObject>>> spheres = new List<List<List<GameObject>>>();
     private List<Spring> springs = new List<Spring>();
@@ -114,11 +116,14 @@ public class ParticleCube : MonoBehaviour {
             Vector3 dirAToB = diffAToB.normalized;
             float displacement = diffAToB.magnitude - spring.restLength;
 
-            // TEMP: check if spring should break
+            // Check if a spring should break.
             if (Mathf.Abs(displacement) > maxDisplacement * spring.restLength) {
                 brokenSprings.Add(spring);
                 brokenSpringCounter++;
-                //Debug.Log("Snap!");
+
+                spring.objA.gameObject.GetComponent<Renderer>().material = brokenMaterial;
+                spring.objB.gameObject.GetComponent<Renderer>().material = brokenMaterial;
+
                 continue;
             }
 
@@ -132,7 +137,7 @@ public class ParticleCube : MonoBehaviour {
             springs.RemoveAll(x => brokenSprings.Contains(x));
 
         // Perform verlet integration
-        float dt = Time.fixedDeltaTime;
+        float dt = Time.fixedDeltaTime * simulationSpeed;
         for (int i = 0; i < yN; i++) {
             for (int j = 0; j < xN; j++) {
                 for (int k = 0; k < zN; k++) {
